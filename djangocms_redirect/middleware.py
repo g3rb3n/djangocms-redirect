@@ -32,7 +32,6 @@ class RedirectMiddleware(MiddlewareMixin):
         super(RedirectMiddleware, self).__init__(*args, **kwargs)
 
     def do_redirect(self, request, response=None):
-        print('do_redirect')
         if (
             getattr(settings, 'DJANGOCMS_REDIRECT_404_ONLY', True) and
             response and response.status_code != 404
@@ -40,7 +39,10 @@ class RedirectMiddleware(MiddlewareMixin):
             return response
 
         full_path_quoted, part, querystring = request.get_full_path().partition('?')
-        possible_paths = [full_path_quoted]
+        full_path_quoted_qs = full_path_quoted + '?' + querystring
+        possible_paths = []
+        possible_paths.append(full_path_quoted_qs)
+        possible_paths.append(full_path_quoted)
         full_path_unquoted = urlunquote_plus(full_path_quoted)
         if full_path_unquoted != full_path_quoted:
             possible_paths.append(urlunquote_plus(full_path_unquoted))
@@ -55,10 +57,15 @@ class RedirectMiddleware(MiddlewareMixin):
         querystring = '%s%s' % (part, querystring)
         current_site = get_current_site(request)
         r = None
-        full_path_quoted = full_path_quoted + '?' + querystring
         possible_paths.append(full_path_quoted)
-        key = get_key_from_path_and_site(full_path_quoted, settings.SITE_ID)
+
+        key = get_key_from_path_and_site(full_path_quoted_qs, settings.SITE_ID)
         cached_redirect = cache.get(key)
+
+        if not cached_redirect:
+            key = get_key_from_path_and_site(full_path_quoted, settings.SITE_ID)
+            cached_redirect = cache.get(key)
+
         if not cached_redirect:
             for path in possible_paths:
                 filters = dict(site=current_site, old_path=path)
