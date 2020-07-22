@@ -32,6 +32,7 @@ class RedirectMiddleware(MiddlewareMixin):
         super(RedirectMiddleware, self).__init__(*args, **kwargs)
 
     def do_redirect(self, request, response=None):
+        print('do_redirect')
         if (
             getattr(settings, 'DJANGOCMS_REDIRECT_404_ONLY', True) and
             response and response.status_code != 404
@@ -54,6 +55,8 @@ class RedirectMiddleware(MiddlewareMixin):
         querystring = '%s%s' % (part, querystring)
         current_site = get_current_site(request)
         r = None
+        full_path_quoted = full_path_quoted + '?' + querystring
+        possible_paths.append(full_path_quoted)
         key = get_key_from_path_and_site(full_path_quoted, settings.SITE_ID)
         cached_redirect = cache.get(key)
         if not cached_redirect:
